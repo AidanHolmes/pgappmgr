@@ -1,0 +1,2 @@
+# pgappmgr
+Pygame application manager
