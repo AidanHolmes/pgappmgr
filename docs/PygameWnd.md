@@ -62,7 +62,7 @@ Called when a window receives a key press. Only focused windows receive these.<b
 `keyid` the numeric identifier for the key (from evdev)<br />
 `key` contains a text name for the key pressed (if known)<br /><br />
 
-## createwnd(rect<br />)
+## createwnd(rect)
 Create a window Surface<br />
 `rect` specifies the diamensions as well as the windows relative position<br />
 <br />
