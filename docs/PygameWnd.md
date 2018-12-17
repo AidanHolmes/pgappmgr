@@ -1,14 +1,14 @@
 # PygameWnd class reference
 ## Notes
-Windows are expected to handle their own drawing routines.
+Windows are expected to handle their own drawing routines.<br />
 A parent window will recursively blit child surfaces when copy_to is called and assumes the child surface is drawn.
 
 ## Importing
-Requires pygame module
+Requires pygame module<br />
 `from pgwindow import PygameWnd`
 
 ## __init__(rect=None, screen=None)
-Initialise the window with optional parameters of `rect` or `screen`
+Initialise the window with optional parameters of `rect` or `screen`<br />
 If no parameters are given then the window will not yet be created and a call to `createwnd` will be necessary
 `rect` specifies a `pygame.Rect` object for the window. x and y offsets are requried to position a window relative to the parent.
 `screen` specifies a `pygame.Surface` object to use. If not specified then one will be created from `rect` diamensions. 
@@ -24,12 +24,12 @@ If `rect` is no specified then diamensions from the `screen` Surface will be use
 * invert - returns True if inverted. When inverted the entire window graphics are inverted in colour
 
 ## add_child(wnd, order=TOP)
-Adds a child window to a parent. This allows processing of inputs and suface blitting to the parent window.
-`wnd` is a PygameWnd class object contained in the parent window
+Adds a child window to a parent. This allows processing of inputs and suface blitting to the parent window.<br />
+`wnd` is a PygameWnd class object contained in the parent window<br />
 `order` sets the zorder of the window. If not specified it will be the topmost window
 
 ## remove_child(wnd)
-Remove child from parent window. Returns True if successful and False if child doesn't exist
+Remove child from parent window. Returns True if successful and False if child doesn't exist<br />
 `wnd` must be base classed from a PygameWnd object
 
 ## set_zorder(wnd,order=TOP)
@@ -39,34 +39,34 @@ Same functionality as add_child for an existing child window. Changes the zorder
 Returns zorder index of a window specified in `wnd`. The window should have been set by add_child
 
 ## touch(evt)
-Touch event router function. Calls `window_touch` function if touch events are on a window. Continues until a window processes the touch event
-Override this to create custom touch event routing
+Touch event router function. Calls `window_touch` function if touch events are on a window. Continues until a window processes the touch event<br />
+Override this to create custom touch event routing<br />
 `evt` is a dictionary of the touch event. Values are absolute for the screen.
 
 ## window_touch(x, y, pressed)
-Called when a window has received a touch event. Override to process these messages. 
-Return True to confirm that the touch was processed and prevent the parent receiving the touch event.
-Return False to pass the event up to the parent window to process
-`x` contains the relative x location touched
-`y` contains the relative y location touched
+Called when a window has received a touch event. Override to process these messages. <br />
+Return True to confirm that the touch was processed and prevent the parent receiving the touch event.<br />
+Return False to pass the event up to the parent window to process<br />
+`x` contains the relative x location touched<br />
+`y` contains the relative y location touched<br />
 `pressed` contains 1 for touch down and 0 for touch up
 
 ## keyinput(evt)
-Key input router function. This will call the `window_key` function for focused windows
-Override to customise the key event routing.
+Key input router function. This will call the `window_key` function for focused windows.<br />
+Override to customise the key event routing.<br />
 `evt` is a dictionary of the key event
 
 ## window_key(press, keyid, key)
-Called when a window receives a key press. Only focused windows receive these
-`press` key up when 0 and down when 1
-`keyid` the numeric identifier for the key (from evdev)
-`key` contains a text name for the key pressed (if known)
+Called when a window receives a key press. Only focused windows receive these.<br />
+`press` key up when 0 and down when 1<br />
+`keyid` the numeric identifier for the key (from evdev)<br />
+`key` contains a text name for the key pressed (if known)<br /><br />
 
-## createwnd(rect)
-Create a window Surface
-`rect` specifies the diamensions as well as the windows relative position
-
+## createwnd(rect<br />)
+Create a window Surface<br />
+`rect` specifies the diamensions as well as the windows relative position<br />
+<br />
 ## copy_to(surface)
-Copy the calling window to a pygame.Surface specified by `surface`.
+Copy the calling window to a pygame.Surface specified by `surface`.<br />
 Automatically inverts windows and calls blit to copy contents. 
 
