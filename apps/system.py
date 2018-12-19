@@ -2,7 +2,11 @@ from pgwindow import PygameApp, PygameButton
 import pygame
 import psutil
 import time
-
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+    
 AppInfo = {'iconname':'System Info',
            'icon':'app.png',
            'description':'System Information',
@@ -24,7 +28,13 @@ class RefreshBtn(PygameButton):
         return True
 
     def _refreshscreen(self):
-        print ("DEBUG: Refresh the screen")
+        try:
+            self._einkrefresh_f = open("/sys/class/graphics/fb0/epd_refresh", "w+")
+            self._einkrefresh_f.write("1")
+            self._einkrefresh_f.close()
+        except (FileNotFoundError, IOError):
+            print ("DEBUG: Cannot refresh e-ink display")
+            raise
         
 class SystemInfo(PygameApp):
     def __init__(self, screen, wndrect):
@@ -85,7 +95,6 @@ class SystemInfo(PygameApp):
 
         
     def window_touch(self, x, y, pressed):
-        print("DEBUG: Window touch at x:{} y:{} state:{}".format(x,y,pressed))
         return False
 
     def window_key(self, press, keyid, key):
