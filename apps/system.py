@@ -34,7 +34,6 @@ class RefreshBtn(PygameButton):
             self._einkrefresh_f.close()
         except (FileNotFoundError, IOError):
             print ("DEBUG: Cannot refresh e-ink display")
-            raise
         
 class SystemInfo(PygameApp):
     def __init__(self, screen, wndrect):
@@ -85,7 +84,7 @@ class SystemInfo(PygameApp):
 
         self._refreshbtn.draw()
         self._refreshbtn.position = (pos.left, pos.bottom, None, None)
-        self._refreshbtn.copy_to(self._surface)
+        self._refreshbtn.copy_to(self)
 
         pos = pygame.Rect(val_start_at, 10,0,0)
         for line in lines:

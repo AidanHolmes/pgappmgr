@@ -1,7 +1,7 @@
 import pygame
 
 WINSIZE = [800, 480]
-ROTATE90 = True
+ROTATE90 = False
 #FRAMERATE = None
 FRAMERATE = 10
 THREADED_SYSTEM = True

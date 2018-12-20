@@ -66,7 +66,9 @@ Called when a window receives a key press. Only focused windows receive these.<b
 Create a window Surface<br />
 `rect` specifies the diamensions as well as the windows relative position<br />
 <br />
-## copy_to(surface)
-Copy the calling window to a pygame.Surface specified by `surface`.<br />
+
+## copy_to(wnd)
+Copy the calling window to a PygameWnd specified by `wnd`.<br />
+Recurses through child windows and pulls in the drawn surfaces.
 Automatically inverts windows and calls blit to copy contents. 
 

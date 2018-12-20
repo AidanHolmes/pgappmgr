@@ -177,5 +177,6 @@ class SystemWindow(AppSubscriber, PygameWnd):
     # give timeslice to header window
     self._headerwnd.work()
 
-    self.copy_to(self._surface)
+    self._headerwnd.copy_to(self)
+    self._appwnd.copy_to(self)
     
