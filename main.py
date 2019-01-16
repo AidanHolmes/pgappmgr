@@ -91,6 +91,8 @@ class System(AppPublisher):
                 if evt['type'] == 'key':
                     self.message_queue.post_message(MSG_KEY_INPUT, INPUT_ABSOLUTE, evt)
                 elif evt['type'] == 'touch':
+                    evt['x'] *= SCALEX
+                    evt['y'] *= SCALEY
                     if ROTATE90:
                         tmp = evt['x']
                         evt['x'] = WINSIZE[1] - evt['y']
@@ -168,7 +170,7 @@ class App(MessageQueue):
         # https://github.com/pygame/pygame/issues/331
         pygame.mixer.quit()
         pygame.event.set_allowed(None)
-#        pygame.event.set_allowed([pygame.QUIT])
+        pygame.mouse.set_visible(False)
 
     def _change_framerate(self, id, context, fr):
         if fr is None:
@@ -185,9 +187,6 @@ class App(MessageQueue):
     def run(self):
         while not self._quit:
             try:
-#                for evt in pygame.event.get():
-#                    if evt.type == pygame.QUIT:
-#                        self._quitapp()
                 self._sys.do_work()
                 self._wnd.do_work()
                 if ROTATE90:

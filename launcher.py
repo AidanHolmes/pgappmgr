@@ -96,7 +96,6 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
         norm = message.copy()
         if self.screen_position.collidepoint(message['x'], message['y']):
             # Redefine x,y for client window
-            pass
             norm['x'] = message['x'] - self.screen_position.x
             norm['y'] = message['y'] - self.screen_position.y
         else:
@@ -111,7 +110,7 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
                 return True
         finally:
             self._lock.release()
-        
+
         if norm['press']:
             self._keydown = norm.copy()
             for icon in self._apps:
@@ -241,8 +240,7 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
                 wnd = pygame.Surface((stride,row)).convert()
                 icon['wnd'] = wnd
                 wnd.fill((255,255,255))
-                wndrect = wnd.get_rect(left=drawx, top=drawy)
-                icon['rect'] = wndrect
+                icon['rect'] = wnd.get_rect(left=drawx, top=drawy)
                 iconrect = self._defaulticon.get_rect(center=(75,75))
                 wnd.blit(self._defaulticon, iconrect)
                 text = self._iconfont.render(icon['iconname'], 1, (10,10,10))

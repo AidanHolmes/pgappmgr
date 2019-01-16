@@ -36,8 +36,8 @@ class RefreshBtn(PygameButton):
             print ("DEBUG: Cannot refresh e-ink display")
         
 class SystemInfo(PygameApp):
-    def __init__(self, screen, wndrect):
-        PygameApp.__init__(self, screen, wndrect)
+    def __init__(self, wndrect, screen):
+        PygameApp.__init__(self, wndrect, screen)
         self._refreshbtn = RefreshBtn(rect = pygame.Rect(10,10,80,50))
         self._refreshbtn.name = "Refresh"
         self.add_child(self._refreshbtn)
