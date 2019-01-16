@@ -1,7 +1,7 @@
 # Main application loop for Pgappmgr
 # Implements the System and App objects
 #
-# Copyright (C) 2018 Aidan Holmes
+# Copyright (C) 2019 Aidan Holmes
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -144,15 +144,11 @@ class System(AppPublisher):
                 self._last_network_ip = ipstr
                 self.message_queue.post_message(MSG_SYS_NETWORK, None, ipstr)
 
-
 class App(MessageQueue):
     def __init__(self):
         MessageQueue.__init__(self)
         self._clock = pygame.time.Clock()
-        pygame.init()
-        # Close mixer to prevent 100% CPU
-        # https://github.com/pygame/pygame/issues/331
-        pygame.mixer.quit()
+        self._init_pygame()
         self._screen = pygame.display.set_mode(WINSIZE,MODE)
         screensize = self._screen.get_size()
         if ROTATE90:
@@ -162,21 +158,38 @@ class App(MessageQueue):
         self._quit = False
         self._framerate = FRAMERATE
         self._subscribe_message(self, MSG_APP_FRAMERATE, None, self._change_framerate)
+        self._sys = System(self)
+        self._wnd = SystemWindow(self, self._softscreen)
+        self._wnd.focused = True
+
+    def _init_pygame(self):
+        pygame.init()
+        # Close mixer to prevent 100% CPU
+        # https://github.com/pygame/pygame/issues/331
+        pygame.mixer.quit()
+        pygame.event.set_allowed(None)
+#        pygame.event.set_allowed([pygame.QUIT])
 
     def _change_framerate(self, id, context, fr):
         if fr is None:
             self._framerate = FRAMERATE
         else:
             self._framerate = fr
+
+    def _quitapp(self):
+        print("Quitting...")
+        self._quit = True
+        self._sys.close()
+        pygame.quit()
         
     def run(self):
-        sys = System(self)
-        wnd = SystemWindow(self, self._softscreen)
-        wnd.focused = True
         while not self._quit:
             try:
-                sys.do_work()
-                wnd.do_work()
+#                for evt in pygame.event.get():
+#                    if evt.type == pygame.QUIT:
+#                        self._quitapp()
+                self._sys.do_work()
+                self._wnd.do_work()
                 if ROTATE90:
                     newsoftscreen = pygame.transform.rotate(self._softscreen,90)
                     self._screen.blit(newsoftscreen,(0,0))
@@ -186,13 +199,10 @@ class App(MessageQueue):
                 if self._framerate:
                     self._clock.tick(self._framerate)
             except KeyboardInterrupt:
-                print("Quitting...")
-                self._quit = True
-                sys.close()
-                pygame.quit()
+                self._quitapp()
 
 def sigkill(a,b):
-    pygame.quit()
+    self._quitapp()
     quit()
     
 # Run the app
