@@ -23,7 +23,7 @@ import importlib
 import time
 import sys
 from appmsg import *
-from config import *
+from config import Config
 from os import listdir
 from os.path import join, isfile
 from msgqueue import AppSubscriber, AppPublisher
@@ -45,11 +45,11 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
     def __init__(self, mq, *args, **kwargs):
         AppSubscriber.__init__(self,mq)
         PygameApp.__init__(self, *args, **kwargs)
-        sys.path.insert(0, LAUNCHER_DIR)
+        sys.path.insert(0, Config.launcher.launcherdir)
         self._apps = []
-        self._defaulticon = pygame.image.load(join(RESOURCE_DIR,LAUNCHER_DEFAULT_ICON_IMAGE))
-        self._defaulticon = pygame.transform.scale(self._defaulticon, LAUNCHER_ICON_IMAGE_SIZE)
-        self._iconfont = pygame.font.Font(None, LAUNCHER_ICON_FONT_SIZE)
+        self._defaulticon = pygame.image.load(join(Config.system.resourcedir,Config.launcher.defaulticon))
+        self._defaulticon = pygame.transform.scale(self._defaulticon, Config.launcher.iconsize)
+        self._iconfont = pygame.font.Font(None, Config.launcher.fontsize)
 
         self.read_apps()
         self._redraw = True
@@ -59,6 +59,10 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
 
         self._lock = Lock()
 
+        self._background = Config.launcher.background
+        self._iconstride = Config.launcher.stride
+        self._iconrowheight = Config.launcher.rowheight
+        
     def keyinput(self,message):
         # override key dispatcher
         self._lock.acquire()
@@ -196,7 +200,7 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
     def run_app(self, appinfo):
         try:    
             self._runningappmodule = importlib.import_module(appinfo['module'])
-            runclass = LAUNCHER_DEFAULT_CLASS
+            runclass = Config.launcher.defaultclass
             if 'class' in appinfo:
                 runclass = appinfo['class']
 
@@ -217,8 +221,8 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
     
     def read_apps(self):
         self._apps = []
-        for f in listdir(LAUNCHER_DIR):
-            if isfile(join(LAUNCHER_DIR,f)) and f[-3:] == '.py':
+        for f in listdir(Config.launcher.launcherdir):
+            if isfile(join(Config.launcher.launcherdir,f)) and f[-3:] == '.py':
                 module_name = f[:-3]
                 try:
                     m = importlib.import_module(module_name)
@@ -230,24 +234,24 @@ class PygameLauncher(AppSubscriber, AppPublisher, PygameApp):
                     pass
 
     def draw(self):
-        stride = 150
-        row = 150
+        stride = self._iconstride
+        row = self._iconrowheight
         drawx = 0
         drawy = 0
-        self._surface.fill((255,255,255))
+        self._surface.fill(self._background)
         for icon in self._apps:
             if not hasattr(icon, 'wnd'):
                 wnd = pygame.Surface((stride,row)).convert()
                 icon['wnd'] = wnd
-                wnd.fill((255,255,255))
+                wnd.fill(self._background)
                 icon['rect'] = wnd.get_rect(left=drawx, top=drawy)
-                iconrect = self._defaulticon.get_rect(center=(75,75))
+                iconrect = self._defaulticon.get_rect(center=(stride/2,row/2))
                 wnd.blit(self._defaulticon, iconrect)
                 text = self._iconfont.render(icon['iconname'], 1, (10,10,10))
-                wnd.blit(text, text.get_rect(centerx=75,top=iconrect.bottom))
+                wnd.blit(text, text.get_rect(centerx=stride/2,top=iconrect.bottom))
             if icon['active']:
                 wnd = icon['wnd'].copy()
-                wnd.fill((255,255,255))
+                wnd.fill(self._background)
                 wnd.blit(icon['wnd'],(0,0),None, pygame.BLEND_SUB)
                 self._surface.blit(wnd, icon['rect'])
             else:

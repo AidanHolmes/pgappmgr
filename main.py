@@ -19,7 +19,7 @@
 # Email: aidanholmes@orbitalfruit.co.uk
 
 from appmsg import *
-from config import *
+from config import Config
 import threading
 import pygame
 import time
@@ -28,6 +28,8 @@ import signal
 from msgqueue import AppPublisher, AppSubscriber, MessageQueue
 from syswnd import SystemWindow
 from events import DeviceEvents
+from os.path import join
+import argparse
 
 # Python 2.7 does not have FileNotFoundError exception
 try:
@@ -49,25 +51,26 @@ class System(AppPublisher):
         self._input = DeviceEvents()
 
         self._battstatus = False
-        try:
-            self._battstatus_f = open(BATT_DEVICE + BATT_STATUS)
-            self._battstatus = True
-            self._battstatus_t = 0
-        except (FileNotFoundError, IOError):
-            pass
-
         self._battcapacity = False
-        try:
-            self._battcapacity_f = open(BATT_DEVICE + BATT_CAPACITY)
-            self._battcapacity = True
-            self._battcapacity_t = 0
-        except (FileNotFoundError, IOError):
-            pass
+        if Config.battery.driver == 'BQ27510':
+            try:
+                self._battstatus_f = open(Config.battery.config.get('status'))
+                self._battstatus = True
+                self._battstatus_t = 0
+            except (FileNotFoundError, IOError):
+                pass
+
+            try:
+                self._battcapacity_f = open(Config.battery.config.get('capacity'))
+                self._battcapacity = True
+                self._battcapacity_t = 0
+            except (FileNotFoundError, IOError):
+                pass
 
         self._network_query_t = 0
         self._last_network_ip = ''
 
-        if THREADED_SYSTEM:
+        if Config.system.threaded:
             self._ithread = threading.Thread(target=self._do_inputs)
             self._ithread.start()
                             
@@ -91,38 +94,38 @@ class System(AppPublisher):
                 if evt['type'] == 'key':
                     self.message_queue.post_message(MSG_KEY_INPUT, INPUT_ABSOLUTE, evt)
                 elif evt['type'] == 'touch':
-                    evt['x'] *= SCALEX
-                    evt['y'] *= SCALEY
-                    if ROTATE90:
+                    evt['x'] *= Config.display.scalex
+                    evt['y'] *= Config.display.scaley
+                    if Config.display.rotate90:
                         tmp = evt['x']
-                        evt['x'] = WINSIZE[1] - evt['y']
+                        evt['x'] = pygame.display.get_surface().get_height() - evt['y']
                         evt['y'] = tmp
                     self.message_queue.post_message(MSG_TOUCH_INPUT, INPUT_ABSOLUTE, evt)
 
     def close(self):
         self._quit = True
-        if THREADED_SYSTEM:
+        if Config.system.threaded:
             self._ithread.join(8.0)
         
     def do_work(self):
         'Do some work. This should operate quickly and return'
         t = time.time()
 
-        if not THREADED_SYSTEM:
+        if not Config.system.threaded:
             evt = self._input.get_event()
             while evt:
                 if evt['type'] == 'key':
                     self.message_queue.post_message(MSG_KEY_INPUT, INPUT_ABSOLUTE, evt)
                 elif evt['type'] == 'touch':
-                    if ROTATE90:
+                    if Config.display.rotate90:
                         tmp = evt['x']
-                        evt['x'] = WINSIZE[1] - evt['y']
+                        evt['x'] = pygame.display.get_surface().get_height() - evt['y']
                         evt['y'] = tmp
                     self.message_queue.post_message(MSG_TOUCH_INPUT, INPUT_ABSOLUTE, evt)
                 evt = self._input.get_event()
 
         if self._battcapacity:
-            if t > self._battcapacity_t+BATT_QUERY_TIME:
+            if t > self._battcapacity_t+Config.battery.getint('poll'):
                 self._battcapacity_t = t
                 try:
                     self._battcapacity_f.seek(0)
@@ -131,7 +134,7 @@ class System(AppPublisher):
                     pass
 
         if self._battstatus:
-            if t > self._battstatus_t+BATT_QUERY_TIME:
+            if t > self._battstatus_t+Config.battery.getint('poll'):
                 self._battstatus_t = t
                 try:
                     self._battstatus_f.seek(0)
@@ -139,7 +142,7 @@ class System(AppPublisher):
                 except IOError:
                     pass
 
-        if t > self._network_query_t+NETWORK_QUERY_TIME:
+        if t > self._network_query_t+Config.network.statuspoll:
             self._network_query_t = t
             ipstr = System.get_network_ip()
             if (ipstr != self._last_network_ip):
@@ -147,18 +150,35 @@ class System(AppPublisher):
                 self.message_queue.post_message(MSG_SYS_NETWORK, None, ipstr)
 
 class App(MessageQueue):
-    def __init__(self):
+    def __init__(self, args):
         MessageQueue.__init__(self)
         self._clock = pygame.time.Clock()
         self._init_pygame()
-        self._screen = pygame.display.set_mode(WINSIZE,MODE)
+
+        # Open the Config singleton
+        Config.open(args.config)
+
+        if Config.display.fullscreen:
+            modes = pygame.display.list_modes(0,pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.HWSURFACE)
+            if len(modes) == 0:
+                print("No hardware supported fullscreen modes found")
+                quit()
+            print ("Available modes: {}".format(modes))
+            print ("Selecting screen mode: {}".format(modes[0]))
+            self._screen = pygame.display.set_mode(modes[0],pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.HWSURFACE)
+        else:
+            if Config.display.size is None:
+                print("Window mode requires a size setting in configuration")
+                quit()
+            self._screen = pygame.display.set_mode(Config.display.size,pygame.DOUBLEBUF | pygame.HWSURFACE)
+        
         screensize = self._screen.get_size()
-        if ROTATE90:
+        if Config.display.rotate90:
             self._softscreen = pygame.Surface((screensize[1],screensize[0])).convert()
         else:
             self._softscreen = pygame.Surface(screensize).convert()
         self._quit = False
-        self._framerate = FRAMERATE
+        self._framerate = Config.system.framerate
         self._subscribe_message(self, MSG_APP_FRAMERATE, None, self._change_framerate)
         self._sys = System(self)
         self._wnd = SystemWindow(self, self._softscreen)
@@ -174,7 +194,7 @@ class App(MessageQueue):
 
     def _change_framerate(self, id, context, fr):
         if fr is None:
-            self._framerate = FRAMERATE
+            self._framerate = Config.system.framerate
         else:
             self._framerate = fr
 
@@ -189,7 +209,7 @@ class App(MessageQueue):
             try:
                 self._sys.do_work()
                 self._wnd.do_work()
-                if ROTATE90:
+                if Config.display.rotate90:
                     newsoftscreen = pygame.transform.rotate(self._softscreen,90)
                     self._screen.blit(newsoftscreen,(0,0))
                 else:
@@ -207,7 +227,10 @@ def sigkill(a,b):
 # Run the app
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigkill)
-    myapp = App()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('config', type=str, help='config filename', metavar='File')
+    args = parser.parse_args()
+    myapp = App(args)
     myapp.run()
 
 

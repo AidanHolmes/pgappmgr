@@ -1,7 +1,7 @@
 # Toplevel system window implementation. Called by main app class to handle
 # inputs and graphics. All other windows are children of this class
 #
-# Copyright (C) 2018 Aidan Holmes
+# Copyright (C) 2019 Aidan Holmes
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #
 # Email: aidanholmes@orbitalfruit.co.uk
 
-from config import *
+from config import Config
 from appmsg import *
 import pygame
 import psutil
@@ -36,25 +36,28 @@ class HeaderBar(AppSubscriber, PygameWnd):
     self.subscribe_message(MSG_SYS_BATTERY, None, self._battevent)
     self.subscribe_message(MSG_SYS_NETWORK, None, self._networkevent)
 
-    self._font = pygame.font.Font(None, SYSTEM_HEADER_FONT_SIZE)
-    self._batteryicon = pygame.image.load(join(RESOURCE_DIR,SYSTEM_HEADER_BATT_ICON))
-    self._batteryicon = pygame.transform.scale(self._batteryicon, SYSTEM_HEADER_BATT_ICON_SIZE)
-    self._batterycharge = 'N/A'
+    self._font = pygame.font.Font(None, Config.statusbar.fontsize)
+    self._batteryicon = pygame.image.load(join(Config.system.resourcedir,Config.statusbar.battery_icon))
+    self._batteryicon = pygame.transform.scale(self._batteryicon, Config.statusbar.battery_icon_size)
+    self._batterycharge = None
     self._batterystatus = 'Full'
     self._networkip = 'Unknown'
 
     self._blink_t = 0
     self._blink_on = False
 
-    self._memicon = pygame.image.load(join(RESOURCE_DIR,SYSTEM_HEADER_MEM_ICON))
-    self._memicon = pygame.transform.scale(self._memicon, SYSTEM_HEADER_MEM_ICON_SIZE)
+    self._memicon = pygame.image.load(join(Config.system.resourcedir,Config.statusbar.memory_icon))
+    self._memicon = pygame.transform.scale(self._memicon, Config.statusbar.memory_icon_size)
     self._mem_poll_t = 0
     self._mem_poll = 2 # sec
     self._memory = psutil.virtual_memory()
 
-    self._cpuicon = pygame.image.load(join(RESOURCE_DIR,SYSTEM_HEADER_CPU_ICON))
-    self._cpuicon = pygame.transform.scale(self._cpuicon, SYSTEM_HEADER_CPU_ICON_SIZE)
+    self._cpuicon = pygame.image.load(join(Config.system.resourcedir,Config.statusbar.cpu_icon))
+    self._cpuicon = pygame.transform.scale(self._cpuicon, Config.statusbar.cpu_icon_size)
     self._cpu = psutil.cpu_percent(None,False)
+
+    self._background = Config.statusbar.background
+    self._headerspacing = Config.statusbar.spacing
 
   def work(self):
     t = time.time()
@@ -75,6 +78,7 @@ class HeaderBar(AppSubscriber, PygameWnd):
   def draw(self):
     # Clear background of header
     self._surface.fill((255,255,255))
+    screenrect = self._surface.get_rect()
 
     txtcharge = ''
     if self._batterystatus == 'Charging':
@@ -83,45 +87,45 @@ class HeaderBar(AppSubscriber, PygameWnd):
       txtcharge = '-'
 
     # Draw battery status
-    text = self._font.render(self._batterycharge + txtcharge + '%', 1, (10,10,10))
-    pos = text.get_rect()
-    pos.right = self._wndpos.width
-    pos.centery = SYSTEM_HEADER_BAR_HEIGHT/2
-    self._surface.blit(text,pos)
-    pos = self._batteryicon.get_rect(centery=SYSTEM_HEADER_BAR_HEIGHT/2, right=pos.left)
-    self._surface.blit(self._batteryicon,pos)
+    if self._batterycharge is not None:
+      text = self._font.render(self._batterycharge + txtcharge + '%', 1, (10,10,10))
+      pos = text.get_rect()
+      pos.right = self._wndpos.width
+      pos.centery = screenrect.centery
+      self._surface.blit(text,pos)
+      pos = self._batteryicon.get_rect(centery=screenrect.centery, right=pos.left)
+      self._surface.blit(self._batteryicon,pos)
+    else:
+      pos = pygame.Rect(screenrect.right,0,0,screenrect.height)
 
     # Draw memory utilisation
     text = self._font.render(str(int(self._memory.percent)) + '%', 1, (10,10,10))
-    pos = text.get_rect(right = pos.left-SYSTEM_HEADER_SPACING, centery=SYSTEM_HEADER_BAR_HEIGHT/2)
+    pos = text.get_rect(right = pos.left-self._headerspacing, centery=screenrect.centery)
     self._surface.blit(text,pos)
-    pos = self._memicon.get_rect(centery=SYSTEM_HEADER_BAR_HEIGHT/2, right=pos.left)
+    pos = self._memicon.get_rect(centery=screenrect.centery, right=pos.left)
     self._surface.blit(self._memicon,pos)
 
     # Draw CPU utilisation
     text = self._font.render(str(int(self._cpu)) + '%', 1, (10,10,10))
-    pos = text.get_rect(right = pos.left-SYSTEM_HEADER_SPACING, centery=SYSTEM_HEADER_BAR_HEIGHT/2)
+    pos = text.get_rect(right = pos.left-self._headerspacing, centery=screenrect.centery)
     self._surface.blit(text,pos)
-    pos = self._cpuicon.get_rect(centery=SYSTEM_HEADER_BAR_HEIGHT/2, right=pos.left)
+    pos = self._cpuicon.get_rect(centery=screenrect.centery, right=pos.left)
     self._surface.blit(self._cpuicon,pos)
-
     
     text = self._font.render(self._networkip, 1, (10,10,10))
-    pos = text.get_rect(left=0, centery=SYSTEM_HEADER_BAR_HEIGHT/2)
+    pos = text.get_rect(left=0, centery=screenrect.centery)
     self._surface.blit(text,pos)
 
     # Blink activity for debug purpose
     if self._blink_on:
       text = self._font.render('*', 1, (10,10,10))
-      pos = text.get_rect(center=self._wndpos.center)
+      pos = text.get_rect(center=screenrect.center)
       self._surface.blit(text,pos)
         
     # Draw the dividing line between header and app body images
-    hrect = self._surface.get_rect()
-    
     pygame.draw.line(self._surface, (0,0,0),
-                     (hrect.left,hrect.bottom-1),
-                     (hrect.right, hrect.bottom-1), 1)
+                     (screenrect.left,screenrect.bottom-1),
+                     (screenrect.right, screenrect.bottom-1), 1)
     
   def _battevent(self, msgid, context, message):
     if context == BATT_CAPACITY:
@@ -149,13 +153,13 @@ class SystemWindow(AppSubscriber, PygameWnd):
     wndrect = pygame.Rect(0,
                           0,
                           self._wndpos.width,
-                          SYSTEM_HEADER_BAR_HEIGHT)
+                          Config.statusbar.height)
     self._headerwnd = HeaderBar(mq, rect=wndrect)
     
     wndrect = pygame.Rect(0,
-                          SYSTEM_HEADER_BAR_HEIGHT,
+                          Config.statusbar.height,
                           self._wndpos.width,
-                          self._wndpos.height - SYSTEM_HEADER_BAR_HEIGHT)
+                          self._wndpos.height - Config.statusbar.height)
     self._appwnd = PygameLauncher(mq, rect=wndrect)
     self._appwnd.focused = True
 
